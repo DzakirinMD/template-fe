@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const REST_API_BASE_URL = "http://localhost:8080/employees";
+const REST_API_BASE_URL = "http://localhost:8080/users";
 
 export const createEmployee = (employeeData) => {
   return axios.post(REST_API_BASE_URL, employeeData);
