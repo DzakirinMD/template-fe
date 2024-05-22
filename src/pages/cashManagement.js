@@ -4,20 +4,23 @@ import {
   listEmployees,
   updateEmployee,
   deleteEmployee,
-} from "../services/employeeService";
+} from "../services/UserService";
+import WithdrawComponent from '../components/WithdrawComponent';
 
 const Employees = () => {
-  // start - show list of employee section
+  // show list of employees
   const [employees, setEmployees] = useState([]);
 
   useEffect(() => {
     listEmployees()
-      .then((response) => setEmployees(response.data))
+    .then((response) => {
+      console.log("Employee data:", response.data);
+      setEmployees(response.data);
+    })
       .catch((error) => console.error("Error fetching employee data:", error));
   }, []);
-  // end - show list of employee section
 
-  // start - add employee section
+  // add employee section
   const [showModal, setShowModal] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
     firstName: "",
@@ -29,8 +32,8 @@ const Employees = () => {
     createEmployee(newEmployee)
       .then((response) => {
         setEmployees([...employees, response.data]);
-        setShowModal(false); // Close the modal
-        setNewEmployee({ firstName: "", lastName: "", email: "" }); // Reset form
+        setShowModal(false);
+        setNewEmployee({ firstName: "", lastName: "", email: "" });
       })
       .catch((error) => {
         if (error.message.includes("CORS")) {
@@ -44,9 +47,8 @@ const Employees = () => {
   const handleInputChange = (e) => {
     setNewEmployee({ ...newEmployee, [e.target.name]: e.target.value });
   };
-  // end - add employee section
 
-  // start - update employee section
+  // update employee section
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
 
@@ -59,13 +61,12 @@ const Employees = () => {
     if (editingEmployee && editingEmployee.id) {
       updateEmployee(editingEmployee.id, editingEmployee)
         .then((response) => {
-          // Update the local state to reflect the changes
           setEmployees(
             employees.map((emp) =>
               emp.id === editingEmployee.id ? response.data : emp
             )
           );
-          setIsEditModalOpen(false); // Close the modal
+          setIsEditModalOpen(false);
         })
         .catch((error) => {
           if (error.message.includes("CORS")) {
@@ -76,15 +77,11 @@ const Employees = () => {
         });
     }
   };
-  // end - update employee section
 
-  // start - delete employee section
-  const [deletingEmployee, setDelitingEmployee] = useState(null);
-
+  // delete employee section
   const handleDeleteClick = (employeeId) => {
     deleteEmployee(employeeId)
       .then(() => {
-        // Filter out the deleted employee from the local state
         setEmployees(employees.filter((emp) => emp.id !== employeeId));
       })
       .catch((error) => {
@@ -95,11 +92,36 @@ const Employees = () => {
         }
       });
   };
-  // end - delete employee section
+
+  // withdraw money section
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+
+  const handleWithdrawClick = (employee) => {
+    setSelectedEmployee(employee);
+    setIsWithdrawModalOpen(true);
+  };
+
+  const handleWithdraw = (updatedAccount) => {
+    setEmployees(
+      employees.map((emp) =>
+        emp.id === selectedEmployee.id
+          ? {
+              ...emp,
+              accountDtoList: emp.accountDtoList.map((acc) =>
+                acc.accountNumber === updatedAccount.accountNumber
+                  ? updatedAccount
+                  : acc
+              ),
+            }
+          : emp
+      )
+    );
+  };
 
   return (
     <div className="container mx-auto mt-10">
-      <h1 className="text-xl font-semibold text-white mb-6">Employees</h1>
+      <h1 className="text-xl font-semibold text-white mb-6">List of Users</h1>
       <div className="overflow-x-auto relative shadow-md sm:rounded-lg">
         <table className="w-full text-sm text-left text-gray-400">
           <thead className="text-xs uppercase bg-gray-700">
@@ -117,6 +139,12 @@ const Employees = () => {
                 Email
               </th>
               <th scope="col" className="py-3 px-6 text-gray-200">
+                Account Number
+              </th>
+              <th scope="col" className="py-3 px-6 text-gray-200">
+                Balance
+              </th>
+              <th scope="col" className="py-3 px-6 text-gray-200">
                 Action
               </th>
             </tr>
@@ -132,6 +160,16 @@ const Employees = () => {
                 <td className="py-4 px-6">{employee.lastName}</td>
                 <td className="py-4 px-6">{employee.email}</td>
                 <td className="py-4 px-6">
+                  {employee.accountDtoList.length > 0 && (
+                    <> {employee.accountDtoList[0].accountNumber} </>
+                  )}
+                </td>
+                <td className="py-4 px-6">
+                  {employee.accountDtoList.length > 0 && (
+                    <> {employee.accountDtoList[0].balance} </>
+                  )}
+                </td>
+                <td className="py-4 px-6">
                   <button
                     onClick={() => handleEditClick(employee)}
                     className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded mr-2"
@@ -144,19 +182,27 @@ const Employees = () => {
                   >
                     Delete
                   </button>
+                  {employee.accountDtoList.length > 0 && (
+                    <button
+                      onClick={() => handleWithdrawClick(employee)}
+                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded ml-2"
+                    >
+                      Withdraw
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        {/* start - add employee section */}
+        {/* Add user section */}
         <div className="mt-4">
           <button
             onClick={() => setShowModal(true)}
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
           >
-            Add New Employee
+            Add New User
           </button>
         </div>
 
@@ -207,8 +253,8 @@ const Employees = () => {
             </div>
           </div>
         )}
-        {/* end - add employee section */}
-        {/* start - edit employee section */}
+
+        {/* Edit employee section */}
         {isEditModalOpen && (
           <div className="fixed inset-0 bg-gray-700 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
             <div className="bg-gray-800 p-5 rounded-lg shadow-lg">
@@ -272,7 +318,15 @@ const Employees = () => {
           </div>
         )}
 
-        {/* end - edit employee section */}
+        {/* Withdraw modal */}
+        <WithdrawComponent
+          isOpen={isWithdrawModalOpen}
+          onClose={() => setIsWithdrawModalOpen(false)}
+          accountNumber={
+            selectedEmployee?.accountDtoList[0].accountNumber
+          }
+          onWithdraw={handleWithdraw}
+        />
       </div>
     </div>
   );
